@@ -1,13 +1,13 @@
 import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Clock, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, AlertCircle, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTransactions, Transaction } from "@/hooks/useTransactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// A simple utility to format time nicely (e.g., "1 hour ago")
 function formatRelativeTime(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
@@ -22,13 +22,12 @@ function formatRelativeTime(dateString: string) {
   return `${days}d ago`;
 }
 
-// A completely redesigned component for rendering a single transaction row.
 function TransactionRow({ tx, user }: { tx: Transaction, user: any }) {
   const isBuy = tx.buyer_id === user?.id;
   const typeText = isBuy ? 'Bought' : 'Sold';
   const counterparty = isBuy ? tx.seller_industry_name : tx.buyer_industry_name;
   const Icon = isBuy ? TrendingUp : TrendingDown;
-  const color = isBuy ? 'text-amber-500' : 'text-green-500'; // Using more distinct colors
+  const color = isBuy ? 'text-amber-500' : 'text-green-500';
 
   return (
     <div className="flex flex-col space-y-2 rounded-lg bg-accent/50 p-4 border border-border/50">
@@ -37,10 +36,31 @@ function TransactionRow({ tx, user }: { tx: Transaction, user: any }) {
           <Icon className="h-4 w-4" />
           <span>{typeText} {tx.credits} Credits</span>
         </div>
-        <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-medium text-xs">
+        
+        {/* ✅ ADDED: Clickable blockchain verification badge */}
+        {tx.blockchain_tx_hash ? (
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a href={`https://sepolia.etherscan.io/tx/${tx.blockchain_tx_hash}`} target="_blank" rel="noopener noreferrer">
+                  <Badge variant="outline" className="cursor-pointer bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20 font-medium text-xs">
+                    <ShieldCheck className="h-3 w-3 mr-1" />
+                    Verified on Blockchain
+                  </Badge>
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Click to view on Etherscan</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-medium text-xs">
             Completed
-        </Badge>
+          </Badge>
+        )}
       </div>
+      
       <div className="flex items-end justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{isBuy ? "From" : "To"} {counterparty}</p>
@@ -81,18 +101,18 @@ export function CreditActivityFeed({ className }: CreditActivityFeedProps) {
           </div>
         ) : error ? (
            <div className="flex items-center justify-center h-[240px] text-center text-destructive">
-              <div>
-                <AlertCircle className="mx-auto h-8 w-8 mb-2" />
-                <p>{error}</p>
-              </div>
-            </div>
+             <div>
+               <AlertCircle className="mx-auto h-8 w-8 mb-2" />
+               <p>{error}</p>
+             </div>
+           </div>
         ) : transactions.length === 0 ? (
            <div className="flex items-center justify-center h-[240px] text-center text-muted-foreground">
              <div>
-                <Clock className="mx-auto h-8 w-8 mb-2" />
-                <p>No transaction history found.</p>
+               <Clock className="mx-auto h-8 w-8 mb-2" />
+               <p>No transaction history found.</p>
              </div>
-            </div>
+           </div>
         ) : (
           <div className="space-y-4">
             {transactions.map((tx) => (
@@ -104,4 +124,3 @@ export function CreditActivityFeed({ className }: CreditActivityFeedProps) {
     </Card>
   );
 }
-
