@@ -32,8 +32,6 @@ interface AIInsight {
   potentialSavings?: string
 }
 
-const GEMINI_API_KEY = 'AIzaSyAPSlpF3bNmdCV7Ju7DYQt4CJrqYQ8zxsw'
-
 export function AIAnalysis() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [insights, setInsights] = useState<AIInsight[]>([])
@@ -51,60 +49,22 @@ export function AIAnalysis() {
 
   const fetchUserData = async () => {
     if (!user) return
-
     try {
       setLoading(true)
-
-      // Fetch dashboard metrics
-      const { data: metrics } = await supabase
-        .from('dashboard_metrics')
-        .select('total_ghg_emissions, available_credits')
-        .eq('id', user.id)
-        .single()
-
-      // Fetch monthly history
-      const { data: history } = await supabase
-        .from('monthly_emissions_history')
-        .select('month, current_year_emissions, previous_year_emissions, target_emissions')
-        .eq('user_id', user.id)
-        .order('month', { ascending: false })
-        .limit(6)
-
-      // Fetch recent logs
-      const { data: logs } = await supabase
-        .from('emission_monitoring_logs')
-        .select('source, emission_value_tco2e, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
+      const { data: metrics } = await supabase.from('dashboard_metrics').select('total_ghg_emissions, available_credits').eq('id', user.id).single()
+      const { data: history } = await supabase.from('monthly_emissions_history').select('month, current_year_emissions, previous_year_emissions, target_emissions').eq('user_id', user.id).order('month', { ascending: false }).limit(6)
+      const { data: logs } = await supabase.from('emission_monitoring_logs').select('source, emission_value_tco2e, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
 
       const formattedUserData: UserData = {
         totalEmissions: metrics?.total_ghg_emissions || 0,
         availableCredits: metrics?.available_credits || 0,
-        monthlyHistory: history?.map(h => ({
-          month: new Date(h.month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          currentYear: h.current_year_emissions || 0,
-          previousYear: h.previous_year_emissions || 0,
-          target: h.target_emissions || 0
-        })) || [],
-        recentLogs: logs?.map(l => ({
-          source: l.source,
-          value: l.emission_value_tco2e || 0,
-          date: new Date(l.created_at).toLocaleDateString()
-        })) || []
+        monthlyHistory: history?.map(h => ({ month: new Date(h.month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), currentYear: h.current_year_emissions || 0, previousYear: h.previous_year_emissions || 0, target: h.target_emissions || 0 })) || [],
+        recentLogs: logs?.map(l => ({ source: l.source, value: l.emission_value_tco2e || 0, date: new Date(l.created_at).toLocaleDateString() })) || []
       }
-
       setUserData(formattedUserData)
-      
-      // Auto-analyze on load
-      await analyzeData(formattedUserData)
     } catch (error) {
       console.error('Error fetching user data:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch your data",
-        variant: "destructive"
-      })
+      toast({ title: "Data Fetch Error", description: "Failed to fetch your initial data for analysis.", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -112,80 +72,17 @@ export function AIAnalysis() {
 
   const analyzeData = async (data: UserData) => {
     if (!data) return
-
+    setAnalyzing(true)
     try {
-      setAnalyzing(true)
-
-      const prompt = `
-        Analyze the following carbon emissions data for an industrial facility and provide 4 specific, actionable AI insights:
-        
-        Current Data:
-        - Total GHG Emissions: ${data.totalEmissions} tCO2e
-        - Available Carbon Credits: ${data.availableCredits}
-        - Monthly History: ${JSON.stringify(data.monthlyHistory)}
-        - Recent Emission Sources: ${JSON.stringify(data.recentLogs)}
-        
-        Please provide exactly 4 insights in this JSON format:
-        [
-          {
-            "category": "efficiency|reduction|market|compliance",
-            "title": "Brief insight title",
-            "description": "Detailed description of the insight",
-            "impact": "high|medium|low",
-            "recommendation": "Specific actionable recommendation",
-            "potentialSavings": "Estimated savings (optional)"
-          }
-        ]
-        
-        Focus on:
-        1. Energy efficiency opportunities
-        2. Emission reduction strategies
-        3. Carbon credit market recommendations
-        4. Compliance optimization
-        
-        Be specific and actionable based on the actual data provided.
-      `
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }]
-        })
+      const { data: insights, error } = await supabase.functions.invoke('analyze-emissions', {
+        body: { userData: data },
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to get AI analysis')
-      }
-
-      const result = await response.json()
-      const generatedText = result.candidates[0].content.parts[0].text
-
-      // Extract JSON from the response
-      const jsonMatch = generatedText.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        const parsedInsights = JSON.parse(jsonMatch[0])
-        setInsights(parsedInsights)
-        toast({
-          title: "Analysis Complete",
-          description: "AI insights have been generated based on your data",
-        })
-      } else {
-        throw new Error('Invalid response format')
-      }
-    } catch (error) {
+      if (error) throw error
+      setInsights(insights)
+      toast({ title: "Analysis Complete", description: "AI insights have been successfully generated." })
+    } catch (error: any) {
       console.error('Error analyzing data:', error)
-      toast({
-        title: "Analysis Failed",
-        description: "Unable to generate AI insights. Please try again.",
-        variant: "destructive"
-      })
+      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" })
     } finally {
       setAnalyzing(false)
     }
@@ -225,7 +122,6 @@ export function AIAnalysis() {
 
   return (
     <div className="flex-1 space-y-5 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">AI-Powered Insights</h1>
@@ -244,7 +140,7 @@ export function AIAnalysis() {
           </Button>
           <Button 
             onClick={() => userData && analyzeData(userData)}
-            disabled={analyzing}
+            disabled={analyzing || !userData}
             className="gap-2"
           >
             {analyzing ? (
@@ -262,7 +158,6 @@ export function AIAnalysis() {
         </div>
       </div>
 
-      {/* Data Overview */}
       {userData && (
         <div className="grid gap-3 md:grid-cols-3">
           <Card className="shadow-none">
@@ -286,7 +181,6 @@ export function AIAnalysis() {
         </div>
       )}
 
-      {/* AI Insights */}
       <div className={`grid ${compact ? 'gap-4' : 'gap-6'} md:grid-cols-2`}>
         {insights.map((insight, index) => {
           const IconComponent = getCategoryIcon(insight.category)
