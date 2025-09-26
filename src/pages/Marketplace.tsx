@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ShoppingCart, Wallet, Search, AlertCircle, IndianRupee, TrendingUp } from "lucide-react";
 import { SellCreditsDialog } from "@/components/marketplace/SellCreditsDialog";
 import { CheckoutDialog } from "@/components/marketplace/CheckoutDialog";
+import { WalletTopUp } from "@/components/marketplace/WalletTopUp";
 import { useUserWallet } from "@/hooks/useUserWallet";
 import { useUserMetrics } from "@/hooks/useUserMetrics";
 import { useTradeListings, TradeListing } from "@/hooks/useTradeListings";
@@ -92,45 +93,81 @@ export function Marketplace() {
         </div>
       </div>
       
-      {/* This section contains the restored UI for credit and wallet balances */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Compact Dashboard Layout - Focus on Marketplace */}
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Credit Balance Card */}
-        <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-primary"><Wallet className="h-6 w-6 text-primary-foreground" /></div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Your Credit Balance</h3>
-                  {loading ? <Skeleton className="h-4 w-32 mt-1" /> : <p className="text-muted-foreground">{profile?.industry_name || 'Your Industry'}</p>}
+        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 select-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-teal-500/5" />
+          <CardContent className="relative p-6 select-none">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                    <Wallet className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">Your Credit Balance</h3>
+                    {loading ? (
+                      <Skeleton className="h-4 w-32 mt-1" />
+                    ) : (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{profile?.industry_name || 'Your Industry'}</p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="text-right">
-                {loading ? <Skeleton className="h-9 w-24" /> : <div className="text-3xl font-bold text-foreground">{metrics?.available_credits?.toLocaleString() ?? 0}</div>}
-                <div className="text-sm text-muted-foreground">Available Credits</div>
+                {loading ? (
+                  <Skeleton className="h-10 w-20" />
+                ) : (
+                  <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    {metrics?.available_credits?.toLocaleString() ?? 0}
+                  </div>
+                )}
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mt-1">
+                  Available Credits
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Wallet Balance Card */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-secondary"><IndianRupee className="h-6 w-6 text-secondary-foreground" /></div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">In-App Wallet</h3>
-                  <p className="text-muted-foreground">Available for trading</p>
+        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 select-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5" />
+          <CardContent className="relative p-6 select-none">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/50">
+                    <IndianRupee className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">In-App Wallet</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Available for trading</p>
+                  </div>
                 </div>
               </div>
               <div className="text-right">
-                {loading ? <Skeleton className="h-9 w-32" /> : <div className="text-3xl font-bold text-foreground">₹{profile?.wallet_balance?.toLocaleString() ?? 0}</div>}
-                <div className="text-sm text-muted-foreground">INR Balance</div>
+                {loading ? (
+                  <Skeleton className="h-10 w-24" />
+                ) : (
+                  <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    ₹{profile?.wallet_balance?.toLocaleString() ?? 0}
+                  </div>
+                )}
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-1">
+                  INR Balance
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Compact Wallet Top-Up Card */}
+        <WalletTopUp 
+          currentBalance={profile?.wallet_balance ?? 0}
+          onTopUpSuccess={refetchProfile}
+        />
       </div>
 
       {/* Market Overview Section */}
@@ -180,8 +217,8 @@ export function Marketplace() {
             <div className="text-center text-muted-foreground py-8"><ShoppingCart className="mx-auto h-8 w-8 mb-2" /><p>There are no open trade listings available right now.</p></div>
           ) : (
             <div className="space-y-4">
-              {listings.map((listing) => (
-                <ListingRow key={listing.sell_id} listing={listing} onBuy={handleBuyClick} loading={loading} isOwnListing={user?.id === listing.user_id} />
+              {listings.map((listing, index) => (
+                <ListingRow key={`${listing.seller_id}-${listing.created_at}-${index}`} listing={listing} onBuy={handleBuyClick} loading={loading} isOwnListing={user?.id === listing.seller_id} />
               ))}
             </div>
           )}

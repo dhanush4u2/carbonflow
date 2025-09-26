@@ -35,15 +35,20 @@ export const useMonthlyEmissions = () => {
           .select('current_year_emissions, target_emissions') // 2. Select the desired columns.
           .eq('user_id', user.id) // 3. Filter to match the current user's ID.
           .order('month', { ascending: false }) // 4. Order by month to get the latest first.
-          .limit(1) // 5. Limit to only one record (the most recent).
-          .single(); // 6. Expect a single object, not an array.
+          .limit(1); // 5. Limit to only one record (the most recent).
 
         if (error) {
           throw error;
         }
 
-        if (data) {
-          setEmissionsData(data);
+        if (data && data.length > 0) {
+          setEmissionsData(data[0]); // Take the first (most recent) record
+        } else {
+          // No data available, set default values
+          setEmissionsData({
+            current_year_emissions: 0,
+            target_emissions: 0
+          });
         }
       } catch (err: any) {
         console.error("Error fetching monthly emissions:", err);
