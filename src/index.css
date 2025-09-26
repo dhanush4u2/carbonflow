@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smart Carbon Credit Platform Design System - Sustainability & Technology Theme
+All colors MUST be HSL for consistency and theming support.
+*/
+
+@layer base {
+  :root {
+    /* Core sustainability palette */
+    --background: 0 0% 100%;
+    --foreground: 158 64% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 158 64% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 158 64% 12%;
+
+    /* Primary: Deep forest green for sustainability */
+    --primary: 158 64% 51.6%;
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 158 64% 45%;
+    --primary-glow: 158 64% 70%;
+
+    /* Secondary: Technology blue for innovation */
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 0 0% 98%;
+    --secondary-hover: 217 91% 55%;
+
+    /* Success: Bright emerald for positive metrics */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --success-light: 142 76% 85%;
+
+    /* Warning: Amber for alerts */
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 98%;
+    --warning-light: 45 93% 85%;
+
+    /* Muted tones for backgrounds */
+    --muted: 158 30% 95%;
+    --muted-foreground: 158 25% 40%;
+
+    --accent: 158 30% 90%;
+    --accent-foreground: 158 64% 12%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 158 30% 88%;
+    --input: 158 30% 88%;
+    --ring: 158 64% 51.6%;
+
+    /* Gradients for hero elements */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--primary)));
+
+    /* Shadows with sustainability theme */
+    --shadow-card: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -1px hsl(var(--primary) / 0.06);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
+    --shadow-success: 0 4px 14px 0 hsl(var(--success) / 0.25);
+
+    /* Animation variables */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode with deep greens and blues */
+    --background: 158 84% 6%;
+    --foreground: 158 30% 95%;
+
+    --card: 158 84% 8%;
+    --card-foreground: 158 30% 95%;
+
+    --popover: 158 84% 8%;
+    --popover-foreground: 158 30% 95%;
+
+    --primary: 158 64% 51.6%;
+    --primary-foreground: 158 84% 6%;
+    --primary-hover: 158 64% 55%;
+    --primary-glow: 158 64% 60%;
+
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 158 84% 6%;
+    --secondary-hover: 217 91% 65%;
+
+    --success: 142 76% 45%;
+    --success-foreground: 158 84% 6%;
+    --success-light: 142 76% 20%;
+
+    --warning: 45 93% 55%;
+    --warning-foreground: 158 84% 6%;
+    --warning-light: 45 93% 20%;
+
+    --muted: 158 30% 15%;
+    --muted-foreground: 158 25% 70%;
+
+    --accent: 158 30% 20%;
+    --accent-foreground: 158 30% 95%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 158 30% 95%;
+
+    --border: 158 30% 20%;
+    --input: 158 30% 20%;
+    --ring: 158 64% 51.6%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-card: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--primary)));
+
+    /* Dark mode shadows */
+    --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+    --shadow-success: 0 4px 14px 0 hsl(var(--success) / 0.3);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Carbon platform specific styles */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-success {
+    box-shadow: var(--shadow-success);
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+
+  /* Metrics animations */
+  @keyframes metric-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  .metric-pulse {
+    animation: metric-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+}
