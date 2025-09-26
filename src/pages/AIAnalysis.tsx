@@ -32,9 +32,6 @@ interface AIInsight {
   potentialSavings?: string
 }
 
-// WARNING: This key is exposed to the public. For production, use an Edge Function.
-const GEMINI_API_KEY = 'AIzaSyAPSlpF3bNmdCV7Ju7DYQt4CJrqYQ8zxsw'
-
 export function AIAnalysis() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [insights, setInsights] = useState<AIInsight[]>([])
@@ -75,56 +72,14 @@ export function AIAnalysis() {
 
   const analyzeData = async (data: UserData) => {
     if (!data) return
+    setAnalyzing(true)
     try {
-      setAnalyzing(true)
-      const prompt = `
-        Analyze the following carbon emissions data for an industrial facility and provide 4 specific, actionable AI insights:
-        
-        Current Data:
-        - Total GHG Emissions: ${data.totalEmissions} tCO2e
-        - Available Carbon Credits: ${data.availableCredits}
-        - Monthly History: ${JSON.stringify(data.monthlyHistory)}
-        - Recent Emission Sources: ${JSON.stringify(data.recentLogs)}
-        
-        Please provide exactly 4 insights in this JSON format:
-        [
-          {
-            "category": "efficiency|reduction|market|compliance",
-            "title": "Brief insight title",
-            "description": "Detailed description of the insight",
-            "impact": "high|medium|low",
-            "recommendation": "Specific actionable recommendation",
-            "potentialSavings": "Estimated savings (optional)"
-          }
-        ]
-        
-        Focus on being specific and actionable based on the actual data provided.
-      `
-      // ✅ THE FIX: The model name is now corrected to 'gemini-1.5-flash-latest'
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+      const { data: insights, error } = await supabase.functions.invoke('analyze-emissions', {
+        body: { userData: data },
       })
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        // Use the specific error message from the Google API
-        throw new Error(errorData.error.message || 'Failed to get AI analysis from Google API.')
-      }
-      
-      const result = await response.json()
-      const generatedText = result.candidates[0].content.parts[0].text
-      const jsonMatch = generatedText.match(/\[[\s\S]*\]/)
-
-      if (jsonMatch) {
-        setInsights(JSON.parse(jsonMatch[0]))
-        toast({ title: "Analysis Complete", description: "AI insights generated successfully." })
-      } else {
-        throw new Error('Invalid response format from AI. Could not find JSON.')
-      }
+      if (error) throw error
+      setInsights(insights)
+      toast({ title: "Analysis Complete", description: "AI insights have been successfully generated." })
     } catch (error: any) {
       console.error('Error analyzing data:', error)
       toast({ title: "Analysis Failed", description: error.message, variant: "destructive" })
@@ -185,7 +140,7 @@ export function AIAnalysis() {
           </Button>
           <Button 
             onClick={() => userData && analyzeData(userData)}
-            disabled={analyzing}
+            disabled={analyzing || !userData}
             className="gap-2"
           >
             {analyzing ? (
