@@ -7,6 +7,7 @@ import { useReportSummary } from "@/hooks/useReportSummary";
 import { useUserWallet } from "@/hooks/useUserWallet";
 import { useUserMetrics } from "@/hooks/useUserMetrics";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useOnboardingSummary } from "@/hooks/useOnboardingSummary";
 // We remove the direct import of the PDF generator from here
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +16,7 @@ export function Reporting() {
   const { profile, loading: profileLoading } = useUserWallet();
   const { metrics, loading: metricsLoading } = useUserMetrics();
   const { transactions, loading: transactionsLoading } = useTransactions();
+  const { summary: onboarding, loading: onboardingLoading, error: onboardingError } = useOnboardingSummary();
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -33,9 +35,7 @@ export function Reporting() {
       // **THE FIX:** We now dynamically import the PDF generator only when needed.
       // This prevents the library from interfering with the initial page load.
       const { generatePdfReport } = await import("@/lib/pdfGenerator");
-      
-      generatePdfReport({ profile, metrics, transactions });
-      
+      generatePdfReport({ profile, metrics, transactions, onboarding });
       toast({
         title: "Report Generated",
         description: "Your PDF report has been downloaded successfully.",
@@ -52,7 +52,7 @@ export function Reporting() {
     }
   };
   
-  const anyDataLoading = profileLoading || metricsLoading || transactionsLoading;
+  const anyDataLoading = profileLoading || metricsLoading || transactionsLoading || onboardingLoading;
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -78,7 +78,45 @@ export function Reporting() {
         </Button>
       </div>
 
-      {/* The rest of your component remains the same... */}
+      {/* Onboarding Results Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg text-primary font-bold">Onboarding Results</CardTitle>
+          <CardDescription>AI-powered analysis of your onboarding submission and initial sustainability profile.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {onboardingLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : onboardingError ? (
+            <div className="text-destructive">{onboardingError}</div>
+          ) : onboarding ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-muted/40 rounded-lg p-4">
+                  <div className="text-xs text-muted-foreground mb-1">AI Estimated Emissions</div>
+                  <div className="text-2xl font-bold text-foreground">{onboarding.ai_estimated_emissions ?? 'N/A'} tCO2e</div>
+                </div>
+                <div className="bg-muted/40 rounded-lg p-4">
+                  <div className="text-xs text-muted-foreground mb-1">AI Allocated Credits</div>
+                  <div className="text-2xl font-bold text-success">{onboarding.ai_allocated_credits ?? 'N/A'}</div>
+                </div>
+                <div className="bg-muted/40 rounded-lg p-4">
+                  <div className="text-xs text-muted-foreground mb-1">Submission Date</div>
+                  <div className="text-lg font-semibold text-foreground">{onboarding.created_at ? new Date(onboarding.created_at).toLocaleDateString() : 'N/A'}</div>
+                </div>
+              </div>
+              {onboarding.ai_reasoning && (
+                <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">AI Reasoning</div>
+                  <div className="text-base text-foreground">{onboarding.ai_reasoning}</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-muted-foreground">No onboarding results found.</div>
+          )}
+        </CardContent>
+      </Card>
       <div className="grid gap-4 md:grid-cols-4">
         {/* Summary Cards */}
         <Card>
