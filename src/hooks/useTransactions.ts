@@ -47,6 +47,6 @@ export const useTransactions = () => {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  return { transactions, loading, error };
+  return { transactions, loading, error, refetch: fetchTransactions };
 };
 

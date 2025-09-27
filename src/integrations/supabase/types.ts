@@ -216,24 +216,24 @@ export type Database = {
           industry_name: string | null
           updated_at: string | null
           wallet_balance: number | null
-          // --- CHANGE: Add the new column ---
           onboarding_completed: boolean
+          wallet_address: string | null // <-- Added wallet_address
         }
         Insert: {
           id: string
           industry_name?: string | null
           updated_at?: string | null
           wallet_balance?: number | null
-          // --- CHANGE: Add the new column ---
           onboarding_completed?: boolean
+          wallet_address?: string | null // <-- Added wallet_address
         }
         Update: {
           id?: string
           industry_name?: string | null
           updated_at?: string | null
           wallet_balance?: number | null
-          // --- CHANGE: Add the new column ---
           onboarding_completed?: boolean
+          wallet_address?: string | null // <-- Added wallet_address
         }
         Relationships: [
           {

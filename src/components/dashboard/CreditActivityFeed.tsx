@@ -1,12 +1,14 @@
 import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Clock, AlertCircle, ShieldCheck } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, AlertCircle, ShieldCheck, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTransactions, Transaction } from "@/hooks/useTransactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 function formatRelativeTime(dateString: string) {
   const date = new Date(dateString);
@@ -23,11 +25,20 @@ function formatRelativeTime(dateString: string) {
 }
 
 function TransactionRow({ tx, user }: { tx: Transaction, user: any }) {
+  const { toast } = useToast();
   const isBuy = tx.buyer_id === user?.id;
   const typeText = isBuy ? 'Bought' : 'Sold';
   const counterparty = isBuy ? tx.seller_industry_name : tx.buyer_industry_name;
   const Icon = isBuy ? TrendingUp : TrendingDown;
   const color = isBuy ? 'text-amber-500' : 'text-green-500';
+
+  const handleCopy = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    toast({
+      title: "Copied to Clipboard!",
+      description: "The transaction hash has been copied.",
+    });
+  };
 
   return (
     <div className="flex flex-col space-y-2 rounded-lg bg-accent/50 p-4 border border-border/50">
@@ -37,23 +48,26 @@ function TransactionRow({ tx, user }: { tx: Transaction, user: any }) {
           <span>{typeText} {tx.credits} Credits</span>
         </div>
         
-        {/* ✅ ADDED: Clickable blockchain verification badge */}
         {tx.blockchain_tx_hash ? (
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <a href={`https://sepolia.etherscan.io/tx/${tx.blockchain_tx_hash}`} target="_blank" rel="noopener noreferrer">
-                  <Badge variant="outline" className="cursor-pointer bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20 font-medium text-xs">
-                    <ShieldCheck className="h-3 w-3 mr-1" />
-                    Verified on Blockchain
-                  </Badge>
-                </a>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Click to view on Etherscan</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-2">
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(tx.blockchain_tx_hash)}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Copy Transaction Hash</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <a href={`https://sepolia.etherscan.io/tx/${tx.blockchain_tx_hash}`} target="_blank" rel="noopener noreferrer">
+              <Badge variant="outline" className="cursor-pointer bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20 font-medium text-xs">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Verified
+              </Badge>
+            </a>
+          </div>
         ) : (
           <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-medium text-xs">
             Completed

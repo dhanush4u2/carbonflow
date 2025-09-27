@@ -1,114 +1,101 @@
-// supabase/functions/execute-trade/index.ts
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { ethers } from 'https://esm.sh/ethers@6.7.0'
-import { corsHeaders } from '../_shared/cors.ts'
 
-// This is the ABI (Application Binary Interface) of your contract.
-// It tells ethers.js how to interact with your deployed contract.
-const contractAbi = [
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "tradeId", "type": "uint256" },
-      { "indexed": true, "internalType": "address", "name": "seller", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "buyer", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "credits", "type": "uint256" }
-    ],
-    "name": "TradeRecorded",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "nextTradeId",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "address", "name": "seller", "type": "address" },
-      { "internalType": "address", "name": "buyer", "type": "address" },
-      { "internalType": "uint256", "name": "credits", "type": "uint256" },
-      { "internalType": "uint256", "name": "amountInr", "type": "uint256" }
-    ],
-    "name": "recordTransaction",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
+// Use ethers.js from npm: for Deno Deploy/Edge Functions
+import { ethers } from 'https://esm.sh/ethers@6'
+
+const CONTRACT_ADDRESS = '0x7ed815014643D694d1628BdAB9ca2cf5ba143585';
+const CONTRACT_ABI = [
+  "function recordTransaction(address seller, address buyer, uint256 credits, uint256 amountInr)"
 ];
 
-// Paste the address of your deployed contract from Remix here.
-const contractAddress = 'YOUR_DEPLOYED_CONTRACT_ADDRESS';
-
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    // Receive the data
     const { listing, buyerProfile } = await req.json();
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    
-    // --- Blockchain Interaction ---
-    const rpcUrl = Deno.env.get('SEPOLIA_RPC_URL');
-    const privateKey = Deno.env.get('WALLET_PRIVATE_KEY');
-    if (!rpcUrl || !privateKey) {
-      throw new Error("Missing blockchain environment variables.");
+    if (!listing || !buyerProfile) {
+      throw new Error("Missing listing or buyer profile data.");
     }
 
+    // Check for secrets
+    const rpcUrl = Deno.env.get('SEPOLIA_RPC_URL');
+    const privateKey = Deno.env.get('WALLET_PRIVATE_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!rpcUrl || !privateKey || !supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Missing required environment variables.");
+    }
+
+    // Connect to Sepolia
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(privateKey, provider);
-    const ledgerContract = new ethers.Contract(contractAddress, contractAbi, wallet);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
-    // Call the smart contract to record the transaction.
-    // NOTE: In a real app, seller/buyer would be real wallet addresses.
-    // Here we use placeholder addresses for demonstration.
-    const tx = await ledgerContract.recordTransaction(
-      '0x000000000000000000000000000000000000dEaD', // Placeholder Seller Address
-      '0x000000000000000000000000000000000000bEEF', // Placeholder Buyer Address
+    // Call the smart contract
+    // You must have seller_wallet_address and buyer_wallet_address in your data
+    const sellerWallet = listing.seller_wallet_address;
+    const buyerWallet = buyerProfile.wallet_address;
+    if (!sellerWallet || !buyerWallet) {
+      console.error("Missing wallet addresses:", {
+        sellerWallet,
+        buyerWallet,
+        listing,
+        buyerProfile
+      });
+      return new Response(JSON.stringify({
+        error: "Missing wallet addresses for seller or buyer.",
+        sellerWallet,
+        buyerWallet,
+        listing,
+        buyerProfile
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+
+    const tx = await contract.recordTransaction(
+      sellerWallet,
+      buyerWallet,
       listing.no_of_credits,
       listing.total_amount
     );
 
-    console.log(`Blockchain transaction sent. Waiting for confirmation... Hash: ${tx.hash}`);
-    const receipt = await tx.wait(); // Wait for the transaction to be mined
-    console.log(`Transaction confirmed in block ${receipt.blockNumber}`);
+    // Wait for transaction to be mined
+    const receipt = await tx.wait();
+    const transactionHash = tx.hash;
 
-    // --- Database Interaction (Now that blockchain is confirmed) ---
-    // In a real app, you would wrap these DB calls in a `supabase.rpc` call
-    // to a pl/pgsql function for true atomicity.
-    
-    // 1. Record the transaction in your own DB, now with the blockchain hash
-    await supabaseAdmin.from('transactions').insert({
-      seller_industry_name: listing.industry_name,
-      buyer_industry_name: buyerProfile.industry_name,
-      amount: listing.total_amount,
-      credits: listing.no_of_credits,
-      seller_id: listing.seller_id,
-      buyer_id: buyerProfile.id,
-      blockchain_tx_hash: receipt.hash // Storing the proof!
-    }).throwOnError();
-    
-    // ... (Your other database updates: update wallets, credits, delete listing, etc.) ...
-    
-    // 4. Delete listing
-    await supabaseAdmin.from('open_trades').delete().eq('id', listing.id).throwOnError();
+    // Update Supabase transactions table
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Find the correct transaction record to update
+    // This assumes you have a transaction id or can match by listing id
+    const { error: updateError } = await supabaseClient
+      .from('transactions')
+      .update({ blockchain_tx_hash: transactionHash })
+      .eq('id', listing.id); // Adjust if your transaction id is different
+    if (updateError) {
+      throw new Error("Failed to update transaction hash in Supabase: " + updateError.message);
+    }
 
-    return new Response(JSON.stringify({ 
-      message: 'Trade successful!',
-      transactionHash: receipt.hash
+    return new Response(JSON.stringify({
+      message: 'Trade recorded on blockchain.',
+      transactionHash
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error("Error in execute-trade function:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    let errorMsg = 'Unknown error';
+    if (error instanceof Error) {
+      errorMsg = error.message;
+    } else if (typeof error === 'string') {
+      errorMsg = error;
+    }
+    return new Response(JSON.stringify({ error: errorMsg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

@@ -10,6 +10,7 @@ import { WalletTopUp } from "@/components/marketplace/WalletTopUp";
 import { useUserWallet } from "@/hooks/useUserWallet";
 import { useUserMetrics } from "@/hooks/useUserMetrics";
 import { useTradeListings, TradeListing } from "@/hooks/useTradeListings";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +45,7 @@ function ListingRow({ listing, onBuy, loading, isOwnListing }: { listing: TradeL
   );
 }
 
+
 export function Marketplace() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -51,10 +53,11 @@ export function Marketplace() {
   const { metrics, loading: metricsLoading, error: metricsError, refetch: refetchMetrics } = useUserMetrics();
   const { marketData, loading: marketLoading, error: marketError } = useMarketData();
   const { listings, loading: listingsLoading, error: listingsError, sellCredits, fetchListings } = useTradeListings(refetchMetrics, refetchProfile);
-  
+  const { refetch: refetchTransactions } = useTransactions();
+
   const [selectedListing, setSelectedListing] = useState<TradeListing | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
-  
+
   const loading = profileLoading || metricsLoading || listingsLoading || marketLoading;
   const combinedError = profileError || metricsError || listingsError || marketError;
 
@@ -68,12 +71,14 @@ export function Marketplace() {
     setSelectedListing(listing);
   };
   
-  // ✅ REVAMPED: This function now calls your secure 'execute-trade' Edge Function
   const handleConfirmPurchase = async (listing: TradeListing) => {
     if (!profile) return;
 
     setIsPurchasing(true);
     try {
+      // Debug: Log wallet addresses before sending to backend
+      console.log('listing.seller_wallet_address:', listing.seller_wallet_address);
+      console.log('profile.wallet_address:', profile.wallet_address);
       const { data, error } = await supabase.functions.invoke('execute-trade', {
         body: { listing, buyerProfile: profile },
       });
@@ -92,7 +97,7 @@ export function Marketplace() {
       refetchProfile();
       refetchMetrics();
       fetchListings();
-      
+      refetchTransactions();
     } catch (err: any) {
       toast({
         title: "Purchase Failed",
@@ -196,19 +201,44 @@ export function Marketplace() {
           </CardContent>
         </Card>
 
-        {/* Wallet Top-Up Card (Untouched as requested) */}
+        {/* Compact Wallet Top-Up Card */}
         <WalletTopUp 
           currentBalance={profile?.wallet_balance ?? 0}
           onTopUpSuccess={refetchProfile}
         />
       </div>
 
-      {/* Market Overview Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* ... Card JSX remains the same ... */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Market Price</CardTitle></CardHeader>
+          <CardContent>
+            {loading ? <Skeleton className="h-7 w-28" /> : <div className="text-2xl font-bold text-foreground">₹{marketData?.market_price_inr?.toLocaleString() ?? 'N/A'}</div>}
+            <div className="flex items-center mt-1"><TrendingUp className="h-4 w-4 text-success mr-1" /><span className="text-sm text-success">+5.2%</span></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Listings</CardTitle></CardHeader>
+          <CardContent>
+            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold text-foreground">{listings.length}</div>}
+            <p className="text-xs text-muted-foreground mt-1">active listings</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">24h Volume</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">--</div>
+            <p className="text-xs text-muted-foreground mt-1">credits traded</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Your Trades</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">--</div>
+            <p className="text-xs text-muted-foreground mt-1">this month</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Marketplace Listings Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-primary" /> Available Credits for Purchase</CardTitle>

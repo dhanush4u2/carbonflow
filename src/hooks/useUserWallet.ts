@@ -47,6 +47,12 @@ export const useUserWallet = () => {
       }
 
       setProfile(data);
+      // Debug: Log wallet address after fetching profile
+      if (data?.wallet_address) {
+        console.log('Fetched wallet_address:', data.wallet_address);
+      } else {
+        console.warn('No wallet_address found in user profile:', data);
+      }
     } catch (err: any) {
       console.error("Error fetching user profile:", err);
       setError("Could not load user profile. Please check your RLS policies.");

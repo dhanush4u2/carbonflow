@@ -144,13 +144,6 @@ export const useTradeListings = (refetchMetrics: () => void, refetchProfile: () 
             return;
         }
 
-        console.log("🛒 Starting wallet purchase:", {
-            listing,
-            buyerProfile,
-            buyerMetrics,
-            listingId: listing.id
-        });
-
         // Validation: This should not happen since we filter invalid listings, but keeping as safety net
         if (!listing.seller_id) {
             console.error("❌ Unexpected: Invalid listing passed validation filters");
